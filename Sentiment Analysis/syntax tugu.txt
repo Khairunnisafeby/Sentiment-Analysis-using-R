@@ -1,0 +1,122 @@
+# Load
+library("tm")
+library("SnowballC")
+library("RColorBrewer")
+library("wordcloud")
+library("stringr")
+
+setwd("E://rsp/sentimen")
+docs<-readLines("tugu.csv")
+
+# Load the data as a corpus
+docs <- Corpus(VectorSource(docs))
+
+#Inspect the content of the document
+inspect(docs)
+
+#Replacing “/”, “@” and “|” with space:
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+
+#Cleaning the text
+# Convert the text to lower case
+docs <- tm_map(docs, content_transformer(tolower))
+
+#Remove punctuation
+docs <- tm_map(docs, toSpace, "[[:punct:]]")
+
+#Remove numbers
+docs <- tm_map(docs, toSpace, "[[:digit:]]")
+
+# add two extra stop words: "available" and "via"
+myStopwords = readLines("stopword.csv")
+
+# remove stopwords from corpus
+docs <- tm_map(docs, removeWords, myStopwords)
+
+# Remove your own stop word
+# specify your stopwords as a character vector
+docs <- tm_map(docs, removeWords, c("nya","kalo","karena","udah","ada", "biar","stasiun","the","brooo")) 
+
+# Eliminate extra white spaces
+docs <- tm_map(docs, stripWhitespace)
+
+# Remove URL
+removeURL <- function(x) gsub("http[[:alnum:]]*", " ", x)
+docs <- tm_map(docs, removeURL)
+
+#Replace words
+docs <- tm_map(docs, gsub, pattern="Howver", replacement="However")
+
+#Build a term-document matrix
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+#Generate the Word cloud
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=50, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+
+dataframe<-data.frame(text=unlist(sapply(docs, `[`)), stringsAsFactors=F)
+
+write.csv(dataframe, "E://rsp/sentimen/Cleaningtugu.csv")
+save.image()
+
+library(tm)
+setwd("E://rsp/sentimen/")
+kalimat2<-read.csv("Cleaning.csv",header=TRUE)
+
+
+#skoring
+positif <- scan("E://rsp/sentimen/positif.csv",what="character",comment.char=";")
+negatif <- scan("E://rsp/sentimen/negatif.csv",what="character",comment.char=";")
+kata.positif = c(positif, "is near to")
+kata.negatif = c(negatif, "cant")
+score.sentiment = function(kalimat2, kata.positif, kata.negatif, .progress='none')
+{
+  require(plyr)
+  require(stringr)
+  scores = laply(kalimat2, function(kalimat, kata.positif, kata.negatif) {
+    kalimat = gsub('[[:punct:]]', '', kalimat)
+    kalimat = gsub('[[:cntrl:]]', '', kalimat)
+    kalimat = gsub('\\d+', '', kalimat)
+    kalimat = tolower(kalimat)
+    
+    list.kata = str_split(kalimat, '\\s+')
+    kata2 = unlist(list.kata)
+    positif.matches = match(kata2, kata.positif)
+    negatif.matches = match(kata2, kata.negatif)
+    positif.matches = !is.na(positif.matches)
+    negatif.matches = !is.na(negatif.matches)
+    score = sum(positif.matches) - (sum(negatif.matches))
+    return(score)
+  }, kata.positif, kata.negatif, .progress=.progress )
+  scores.df = data.frame(score=scores, text=kalimat2)
+  return(scores.df)
+}
+
+hasil = score.sentiment(kalimat2$text, kata.positif, kata.negatif)
+View(hasil)
+
+#CONVERT SCORE TO SENTIMENT
+hasil$klasifikasi<- ifelse(hasil$score<0, "Negatif","Positif")
+hasil$klasifikasi
+View(hasil)
+
+#EXCHANGE ROW SEQUENCE
+data <- hasil[c(3,1,2)]
+View(data)
+write.csv(data, file = "ENLabeltugu.csv")
+
+#asosiasi kata
+v<-as.list(findAssocs(dtm, terms =c("tingkatkan","fasilitas"),
+                      corlimit = c(0.2)))
+v
+
