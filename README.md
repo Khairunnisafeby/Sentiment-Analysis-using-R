@@ -1,3 +1,3 @@
 # Sentiment-Analysis-using-R
 
-coba
+I used primary data which was taken on 12 December 2017 in Lempuyangan and Tugu Station in Yogyakarta.
