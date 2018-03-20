@@ -1,3 +1,10 @@
 # Sentiment-Analysis-using-R
 
-I used primary data which was taken on 12 December 2017 in Lempuyangan and Tugu Station in Yogyakarta.
+Need to install some packages 
+write this in your R Script: 
+
+install.packages("tm") 
+install.packages("SnowballC")
+install.packages("RColorBrewer") 
+install.packages("wordcloud")
+install.packages("stringr")
